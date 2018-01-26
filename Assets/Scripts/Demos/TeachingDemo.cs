@@ -33,7 +33,7 @@ namespace Assets.Scripts.Demos
             Debug.Log(commandMessage);
 
             eventManager.InsertEvent("", 0);
-            eventManager.InsertEvent("slide(block1)", 1);
+			eventManager.InsertEvent("slide(block1,<0; 0.7; 0>)", 1);
         }
     }
 }

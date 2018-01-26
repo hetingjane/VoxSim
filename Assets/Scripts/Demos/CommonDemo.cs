@@ -14,6 +14,7 @@ namespace Assets.Scripts.Demos
         InteractionSystem interactionSystem;
 
         GameObject Diana;
+		FullBodyBipedIK ik;
 
         IKControl ikControl;
         IKTarget leftTarget;
@@ -29,9 +30,13 @@ namespace Assets.Scripts.Demos
             //eventManager.EventComplete += ReturnToRest;
 
             Diana = GameObject.Find("Diana");
+			ik = Diana.GetComponent<FullBodyBipedIK> ();
+			interactionSystem = Diana.GetComponent<InteractionSystem> ();
             ikControl = Diana.GetComponent<IKControl>();
             leftTargetDefault = ikControl.leftHandObj.transform.position;
             rightTargetDefault = ikControl.rightHandObj.transform.position;
+
+			TurnForward ();
         }
 
         void ReturnToRest(object sender, EventArgs e)

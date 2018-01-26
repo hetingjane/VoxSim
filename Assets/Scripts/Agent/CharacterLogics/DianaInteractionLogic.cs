@@ -345,7 +345,7 @@ namespace Agent
 		public AgentInteraction interactionController;
 
 		[CustomEditor(typeof(DianaInteractionLogic))]
-		public class StackPreview : Editor {
+		public class DebugPreview : Editor {
 			public override void OnInspectorGUI() {
 
 				var bold = new GUIStyle(); 
@@ -367,6 +367,14 @@ namespace Agent
 						GUILayout.Label (((DianaInteractionLogic)target).StackSymbolToString (item)); 
 					}
 				}
+
+				GUILayout.Label("State History", bold);
+				if (((DianaInteractionLogic)target).StateHistory != null) {
+					foreach (PDAState item in ((DianaInteractionLogic)target).StateHistory) {
+						GUILayout.Label (item.Name); 
+					}
+				}
+
 			}
 		}
 
@@ -412,8 +420,25 @@ namespace Agent
 			return ActionSuggestions;
 		}
 
+		protected string GetMostRecentInputSymbolName(object arg) {
+			return GetLastInputSymbol ().Name;
+		}
+
+		protected List<string> GetMostRecentInputSymbolNameAsList(object arg) {
+			return new List<string>(new string[]{GetLastInputSymbol ().Name});
+		}
+
 		public object NullObject(object arg) {
 			return null;
+		}
+
+		public List<string> GetActionOptionsIfNull(object arg) {
+			if (ActionSuggestions.Count == 0) {
+				return ActionOptions;
+			}
+			else {
+				return null;
+			}
 		}
 
 		public List<PDASymbol> PushObjectOptions (object arg) {
@@ -424,7 +449,7 @@ namespace Agent
 					null, null,
 					(IndicatedRegion == null) ? ObjectOptions.GetRange(0,s+1) : ObjectOptions.OrderByDescending(
 						m => (m.transform.position - IndicatedRegion.center).magnitude).ToList().GetRange(0,s+1),
-					null, new List<string>())).ToList ();
+					null, null)).ToList ();
 
 			return symbolList;
 		}
@@ -438,7 +463,7 @@ namespace Agent
 					Enumerable.Range (0, s+1).Select(a => string.Format("put({0},on({1}))",IndicatedObj.name,
 						ObjectOptions.OrderByDescending(
 							m => (m.transform.position - IndicatedRegion.center).magnitude).ToList()[a].name)).ToList(), 
-					new List<string>())).ToList ();
+								new List<string>())).ToList ();
 
 			return symbolList;
 		}
@@ -453,6 +478,41 @@ namespace Agent
 		public List<string> GeneratePutAtRegionCommand (object arg) {
 			List<string> actionList = new List<string> (
 				new string[]{ "put({0}" + string.Format (",{0})", Helper.VectorToParsable (IndicatedRegion.center)) });
+
+			return actionList;
+		}
+
+		public List<string> GenerateDirectedPutCommand (object arg) {
+			List<string> actionList = new List<string> (
+				new string[]{ "put({0}" + string.Format (",{0})", 
+					GetGestureContent (
+						RemoveInputSymbolType (
+							RemoveGestureTrigger (
+								ActionSuggestions[0], GetGestureTrigger (ActionSuggestions[0])),
+							GetInputSymbolType (ActionSuggestions[0])),
+						"grab move").ToLower()) });
+
+			return actionList;
+		}
+
+		public List<string> GenerateDirectedSlideCommand (object arg) {
+			List<string> actionList = (ActionSuggestions.Count > 0) ? 
+				new List<string> (
+					new string[]{ "slide({0}" + string.Format (",{0})", 
+						GetGestureContent (
+							RemoveInputSymbolType (
+								RemoveGestureTrigger (
+									ActionSuggestions[0], GetGestureTrigger (ActionSuggestions[0])),
+								GetInputSymbolType (ActionSuggestions[0])),
+							"push").ToLower()) }) :
+				new List<string> (
+					new string[]{ "slide({0}" + string.Format (",{0})", 
+						GetGestureContent (
+							RemoveInputSymbolType (
+								RemoveGestureTrigger (
+									ActionOptions[0], GetGestureTrigger (ActionOptions[0])),
+								GetInputSymbolType (ActionOptions[0])),
+							"push").ToLower()) });
 
 			return actionList;
 		}
@@ -497,6 +557,7 @@ namespace Agent
 					GetState("Suggest"),
 					new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None,null))));
 
+			States.Add(new PDAState("TrackPointing",null));
 			States.Add(new PDAState("SituateDeixis",
 				new TransitionGate(
 					new FunctionDelegate(EpistemicallyCertain),
@@ -535,12 +596,21 @@ namespace Agent
 						new StackSymbolContent(null,null,null,null,null,new FunctionDelegate(GetActionOptions))))));
 			
 			States.Add(new PDAState("StopGrab",null));
+			States.Add(new PDAState("StartPush",null));
+			States.Add(new PDAState("StopPush",
+				new TransitionGate(
+					new FunctionDelegate(EpistemicallyCertain),
+					GetState("Suggest"),
+					new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+						new StackSymbolContent(null,null,null,null,null,new FunctionDelegate(GetActionOptions))))));
+			
 			States.Add(new PDAState("ConfirmObject",null));
 			States.Add(new PDAState("RequestObject",
 				new TransitionGate(
 					new FunctionDelegate(EpistemicallyCertain),
 					GetState("Suggest"),
-					new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None,null))));
+					new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+						new StackSymbolContent(null,null,null,null,null,new FunctionDelegate(GetActionOptionsIfNull))))));
 			
 			States.Add(new PDAState("PlaceInRegion",null));
 			States.Add(new PDAState("RequestAction",null));
@@ -553,19 +623,45 @@ namespace Agent
 			InputSymbols.Add(new PDASymbol("G engage start"));
 			InputSymbols.Add(new PDASymbol("G left point high"));
 			InputSymbols.Add(new PDASymbol("G right point high"));
+			InputSymbols.Add(new PDASymbol("G left point low"));
+			InputSymbols.Add(new PDASymbol("G right point low"));
 			InputSymbols.Add(new PDASymbol("G posack high"));
 			InputSymbols.Add(new PDASymbol("G negack high"));
+			InputSymbols.Add(new PDASymbol("G posack low"));
+			InputSymbols.Add(new PDASymbol("G negack low"));
 			InputSymbols.Add(new PDASymbol("G grab high"));
+			InputSymbols.Add(new PDASymbol("G grab low"));
 			InputSymbols.Add(new PDASymbol("G grab move left high"));
 			InputSymbols.Add(new PDASymbol("G grab move right high"));
 			InputSymbols.Add(new PDASymbol("G grab move front high"));
 			InputSymbols.Add(new PDASymbol("G grab move back high"));
 			InputSymbols.Add(new PDASymbol("G grab move up high"));
 			InputSymbols.Add(new PDASymbol("G grab move down high"));
+			InputSymbols.Add(new PDASymbol("G grab move left low"));
+			InputSymbols.Add(new PDASymbol("G grab move right low"));
+			InputSymbols.Add(new PDASymbol("G grab move front low"));
+			InputSymbols.Add(new PDASymbol("G grab move back low"));
+			InputSymbols.Add(new PDASymbol("G grab move up low"));
+			InputSymbols.Add(new PDASymbol("G grab move down low"));
 			InputSymbols.Add(new PDASymbol("G grab stop"));
+			InputSymbols.Add(new PDASymbol("G push left high"));
+			InputSymbols.Add(new PDASymbol("G push left low"));
+			InputSymbols.Add(new PDASymbol("G push left stop"));
+			InputSymbols.Add(new PDASymbol("G push right high"));
+			InputSymbols.Add(new PDASymbol("G push right low"));
+			InputSymbols.Add(new PDASymbol("G push right stop"));
+			InputSymbols.Add(new PDASymbol("G push front high"));
+			InputSymbols.Add(new PDASymbol("G push front low"));
+			InputSymbols.Add(new PDASymbol("G push front stop"));
+			InputSymbols.Add(new PDASymbol("G push back high"));
+			InputSymbols.Add(new PDASymbol("G push back low"));
+			InputSymbols.Add(new PDASymbol("G push back stop"));
 			InputSymbols.Add(new PDASymbol("G engage stop"));
 			InputSymbols.Add(new PDASymbol("S YES"));
 			InputSymbols.Add(new PDASymbol("S NO"));
+			InputSymbols.Add(new PDASymbol("S THIS"));
+			InputSymbols.Add(new PDASymbol("S THAT"));
+			InputSymbols.Add(new PDASymbol("S THERE"));
 			InputSymbols.Add(new PDASymbol("S GRAB"));
 			InputSymbols.Add(new PDASymbol("S PUT"));
 			InputSymbols.Add(new PDASymbol("S PUSH"));
@@ -584,6 +680,8 @@ namespace Agent
 			InputSymbols.Add(new PDASymbol("S BACK"));
 			InputSymbols.Add(new PDASymbol("S UP"));
 			InputSymbols.Add(new PDASymbol("S DOWN"));
+			InputSymbols.Add(new PDASymbol("P l"));
+			InputSymbols.Add(new PDASymbol("P r"));
 
 			List<PDASymbol> colors = GetInputSymbolsByName (
 				"S RED",
@@ -612,7 +710,8 @@ namespace Agent
 
 			TransitionRelation.Add(new PDAInstruction(											// instruction operated by input signal
 				GetStates("Wait"),																// in this state
-				GetInputSymbolsByName("G left point high","G right point high"),				// when we get this message
+				GetInputSymbolsByName("G left point high","G right point high",
+					"S THIS","S THAT","S THERE"),												// when we get this message
 				GenerateStackSymbol(null, null, null, null, null, null),						// and this is the top of the stack
 				GetState("SituateDeixis"),														// go to this state
 				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,				// and do this to the stack
@@ -620,9 +719,21 @@ namespace Agent
 
 			TransitionRelation.Add(new PDAInstruction(
 				GetStates("Wait"),
-				GetInputSymbolsByName("G left point high","G right point high"),
+				GetInputSymbolsByName("G left point high","G right point high",
+					"S THIS","S THAT","S THERE"),
 				GenerateStackSymbolFromConditions(
 					(o) => o != null, null, null, null, null, null
+				),
+				GetState("SituateDeixis"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null, null, new Region(), null, null, null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Wait"),
+				GetInputSymbolsByName("G left point high","G right point high",
+					"S THIS","S THAT","S THERE"),
+				GenerateStackSymbolFromConditions(
+					null, (g) => g != null, null, null, null, null
 				),
 				GetState("SituateDeixis"),
 				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
@@ -693,11 +804,78 @@ namespace Agent
 				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None, null)));
 
 			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Wait"),
+				GetInputSymbolsByName("S LEFT","S RIGHT","S FRONT","S BACK"),
+				GenerateStackSymbolFromConditions(
+					null, (g) => g != null, 
+					null, null, null, null
+				),	
+				GetState("StopGrabMove"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push, 
+					new StackSymbolContent(null, null, null, null, 
+						new FunctionDelegate(GetMostRecentInputSymbolNameAsList), null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Wait"),
+				GetInputSymbolsByName("G push left high",
+					"G push right high",
+					"G push front high",
+					"G push back high"),
+				GenerateStackSymbolFromConditions(null, null, null, null, null, null),	
+				GetState("StartPush"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None, null)));
+			
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Wait"),
+				GetInputSymbolsByName("S LEFT","S RIGHT","S FRONT","S BACK"),
+				GenerateStackSymbolFromConditions(
+					(o) => o != null, null, 
+					null, null, null, null
+				),	
+				GetState("StopPush"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push, 
+					new StackSymbolContent(null, null, null, null, 
+						new FunctionDelegate(GetMostRecentInputSymbolNameAsList), null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Wait"),
+				GetInputSymbolsByName("G left point low","G right point low"),
+				GenerateStackSymbolFromConditions(null, null, null, null, null, null),
+				GetState("Suggest"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null,null,null,null,null,null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Wait"),
+				GetInputSymbolsByName("G grab low","G grab move left low", "G grab move right low",
+					"G grab move front low","G grab move back low","G grab move up low",
+					"G grab move down low","G push left low","G push right low",
+					"G push front low","G push back low"),
+				GenerateStackSymbolFromConditions(null, null, null, null, null, null),
+				GetState("Suggest"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null,null,null,null,null,new FunctionDelegate(GetActionOptions)))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Wait"),
+				GetInputSymbolsByName("P l","P r"),
+				GenerateStackSymbolFromConditions(null, null, null, null, null, null),
+				GetState("TrackPointing"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None, null)));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("TrackPointing"),
+				null,
+				GenerateStackSymbolFromConditions(null, null, null, null, null, null),
+				GetState("Wait"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None, null)));
+
+			TransitionRelation.Add(new PDAInstruction(
 				GetStates("Suggest"),
 				GetInputSymbolsByName("S YES","G posack high"),
 				GenerateStackSymbolFromConditions(											// condition set
 					null, null, null,
-					null, null, (s) => s.Count > 0											// condition: # suggestions > 0
+					null, null, (s) => s.Count > 0														// condition: # suggestions > 0
 				),	
 				GetState("Confirm"),
 				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None,null)));
@@ -788,6 +966,118 @@ namespace Agent
 				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
 					new StackSymbolContent(null, null, null, null, null, null))));
 
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Confirm"),
+				null,
+				GenerateStackSymbolFromConditions(
+					null, (g) => g != null, null,
+					null, (a) => a.Count == 0,
+					(s) => s[0].Contains("grab move")
+				),	
+				GetState("StopGrabMove"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null, null, null, null, null, null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Confirm"),
+				null,
+				GenerateStackSymbolFromConditions(
+					(o) => o == null, (g) => g == null, null,
+					null, (a) => (a.Count > 0) && (a[0].Contains("grab move")),
+					(s) => s[0].Contains("grab move")
+				),	
+				GetState("RequestObject"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null, null, null, null,
+						new FunctionDelegate(GetActionSuggestions), null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Confirm"),
+				null,
+				GenerateStackSymbolFromConditions(
+					(o) => o == null, (g) => g == null, null,
+					null, (a) => a.Count == 0,
+					(s) => s[0].Contains("grab move")
+				),	
+				GetState("RequestObject"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null, null, null, null,
+						new FunctionDelegate(GetActionSuggestions), null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Confirm"),
+				null,
+				GenerateStackSymbolFromConditions(
+					(o) => o != null, null, null,
+					null, (a) => (a.Count > 0) && (a[0].Contains("push")),
+					(s) => s[0].Contains("push")
+				),	
+				GetState("StopPush"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null, null, null, null, null, null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Confirm"),
+				null,
+				GenerateStackSymbolFromConditions(
+					null, (g) => g != null, null,
+					null, (a) => (a.Count > 0) && (a[0].Contains("push")),
+					(s) => s[0].Contains("push")
+				),	
+				GetState("StopPush"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null, null, null, null, null, null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Confirm"),
+				null,
+				GenerateStackSymbolFromConditions(
+					(o) => o != null, null, null,
+					null, (a) => a.Count == 0,
+					(s) => s[0].Contains("push")
+				),	
+				GetState("StopPush"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null, null, null, null, null, null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Confirm"),
+				null,
+				GenerateStackSymbolFromConditions(
+					null, (g) => g != null, null,
+					null, (a) => a.Count == 0,
+					(s) => s[0].Contains("push")
+				),	
+				GetState("StopPush"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null, null, null, null, null, null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Confirm"),
+				null,
+				GenerateStackSymbolFromConditions(
+					(o) => o == null, (g) => g == null, null,
+					null, (a) => (a.Count > 0) && (a[0].Contains("push")),
+					(s) => s[0].Contains("push")
+				),	
+				GetState("RequestObject"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null, null, null, null, 
+						new FunctionDelegate(GenerateDirectedSlideCommand), null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("Confirm"),
+				null,
+				GenerateStackSymbolFromConditions(
+					(o) => o == null, (g) => g == null, null,
+					null, (a) => a.Count == 0,
+					(s) => s[0].Contains("push")
+				),	
+				GetState("RequestObject"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null, null, null, null, 
+						new FunctionDelegate(GetActionSuggestions), null))));
+
 			TransitionRelation.Add(new PDAInstruction(										// instruction operated by stack rewrite
 				GetStates("SituateDeixis"),
 				null,																		// no input symbol
@@ -797,6 +1087,17 @@ namespace Agent
 					null, null, null
 				),	
 				GetState("InterpretDeixis"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None,null)));	
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("SituateDeixis"),
+				null,								
+				GenerateStackSymbolFromConditions(	
+					null, null,
+					(r) => r == null,
+					null, null, null
+				),	
+				GetState("RequestObject"),
 				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None,null)));	
 
 			TransitionRelation.Add(new PDAInstruction(
@@ -898,10 +1199,35 @@ namespace Agent
 				GetStates("RegionAsGoal"),
 				GetInputSymbolsByName("G posack high","S YES"),
 				GenerateStackSymbolFromConditions(
-					null, null, (r) => r != null && r.max != r.min,
+					(o) => o == null, (g) => g == null,
+					(r) => r != null && r.max != r.min,
 					null, null, null
 				),	
 				GetState("RequestObject"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null, null, null, new List<GameObject>(), 
+						new FunctionDelegate(GeneratePutAtRegionCommand), new List<string>()))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("RegionAsGoal"),
+				GetInputSymbolsByName("G posack high","S YES"),
+				GenerateStackSymbolFromConditions(
+					(o) => o != null, null, (r) => r != null && r.max != r.min,
+					null, null, null
+				),	
+				GetState("ComposeObjectAndAction"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null, null, null, new List<GameObject>(), 
+						new FunctionDelegate(GeneratePutAtRegionCommand), new List<string>()))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("RegionAsGoal"),
+				GetInputSymbolsByName("G posack high","S YES"),
+				GenerateStackSymbolFromConditions(
+					null, (g) => g != null, (r) => r != null && r.max != r.min,
+					null, null, null
+				),	
+				GetState("ComposeObjectAndAction"),
 				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
 					new StackSymbolContent(null, null, null, new List<GameObject>(), 
 						new FunctionDelegate(GeneratePutAtRegionCommand), new List<string>()))));
@@ -941,25 +1267,18 @@ namespace Agent
 
 			TransitionRelation.Add(new PDAInstruction(
 				GetStates("RequestObject"),
+				GetInputSymbolsByName("P l","P r"),
+				GenerateStackSymbolFromConditions(null, null, null, null, null, null),
+				GetState("TrackPointing"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None, null)));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("RequestObject"),
 				GetInputSymbolsByName("G left point high","G right point high"),
-				GenerateStackSymbolFromConditions(
-					null, null, (r) => r != null && r.max != r.min,
-					null, null, null
-				),	
+				GenerateStackSymbolFromConditions(null, null, null, null, null, null),	
 				GetState("SituateDeixis"),
 				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
 					new StackSymbolContent(null,null,new Region(),null,null,null))));
-
-//			TransitionRelation.Add(new PDAInstruction(
-//				GetStates("RequestObject"),
-//				GetInputSymbolsByName("G left point high","G right point high"),
-//				GenerateStackSymbolFromConditions(
-//					null, null, null,
-//					null, (a) => a.Count > 0, null
-//				),	
-//				GetState("SituateDeixis"),
-//				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
-//					new StackSymbolContent(null,null,new Region(),null,null,null))));
 
 			TransitionRelation.Add(new PDAInstruction(
 				GetStates("DisambiguateObject"),
@@ -1013,15 +1332,50 @@ namespace Agent
 				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None,null)));
 
 			TransitionRelation.Add(new PDAInstruction(
+				GetStates("ConfirmObject"),
+				null,
+				GenerateStackSymbolFromConditions((o) => o != null, null,
+					(r) => r == null, null, null,
+					(s) => ((s.Count > 0) && (s[0].Contains("grab move")))
+				),	
+				GetState("StopGrabMove"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None,null)));
+
+			TransitionRelation.Add(new PDAInstruction(
 				GetStates("ComposeObjectAndAction"),
 				null,
 				GenerateStackSymbolFromConditions((o) => o != null, null,
 					null, null,
 					(a) => ((a.Count > 0) &&
-						(a.Where(aa => aa.Contains("{0}"))).ToList().Count == 0),
+						(a.Where(aa => aa.Contains("{0}") || 
+							aa.Contains("slide"))).ToList().Count == 0),
 					null),	
 				GetState("ConfirmEvent"),
 				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None,null)));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("ComposeObjectAndAction"),
+				null,
+				GenerateStackSymbolFromConditions(null, (g) => g != null,
+					null, null,
+					(a) => ((a.Count > 0) &&
+						(a.Where(aa => aa.Contains("{0}") || 
+							aa.Contains("slide"))).ToList().Count == 0),
+					null),	
+				GetState("ConfirmEvent"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None,null)));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("ComposeObjectAndAction"),
+				null,
+				GenerateStackSymbolFromConditions((o) => o != null, null,
+					null, null,
+					(a) => ((a.Count > 0) &&
+						(a.Where(aa => aa.Contains("slide"))).ToList().Count > 0),
+					null),	
+				GetState("StopPush"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push,
+					new StackSymbolContent(null,null,null,null,null,new List<string>()))));
 
 			TransitionRelation.Add(new PDAInstruction(
 				GetStates("ConfirmObject"),
@@ -1074,22 +1428,66 @@ namespace Agent
 					null, null, null, null
 				),	
 				GetState("StopGrabMove"),
-				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None, null)));
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push, 
+					new StackSymbolContent(null, null, null, null, null, null))));
 
 			TransitionRelation.Add(new PDAInstruction(
 				GetStates("StartGrabMove"),
-				GetInputSymbolsByName("G grab move left high",
-					"G grab move right high",
-					"G grab move front high",
-					"G grab move back high",
-					"G grab move up high",
-					"G grab move down high"),
+				GetInputSymbolsByName("G grab move left high","G grab move left low",
+					"G grab move right high","G grab move right low",
+					"G grab move front high","G grab move front low",
+					"G grab move back high","G grab move back low",
+					"G grab move up high","G grab move up low",
+					"G grab move down high","G grab move down low"),
 				GenerateStackSymbolFromConditions(
 					null, (g) => g != null, 
 					null, null, null, null
 				),	
 				GetState("StartGrabMove"),
 				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None, null)));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("StartPush"),
+				GetInputSymbolsByName("G push left stop",
+					"G push right stop",
+					"G push front stop",
+					"G push back stop"),
+				GenerateStackSymbolFromConditions(
+					(o) => o != null, null, 
+					null, null, null, null
+				),	
+				GetState("StopPush"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push, 
+					new StackSymbolContent(null, null, null, null, null, null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("StartPush"),
+				GetInputSymbolsByName("G push left stop",
+					"G push right stop",
+					"G push front stop",
+					"G push back stop"),
+				GenerateStackSymbolFromConditions(
+					null, (g) => g != null, 
+					null, null, null, null
+				),	
+				GetState("StopPush"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push, 
+					new StackSymbolContent(null, null, null, null, null, null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("StartPush"),
+				GetInputSymbolsByName("G push left stop",
+					"G push right stop",
+					"G push front stop",
+					"G push back stop"),
+				GenerateStackSymbolFromConditions(
+					(o) => o == null, (g) => g == null, 
+					null, null, null, null
+				),	
+				GetState("RequestObject"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push, 
+					new StackSymbolContent(null, null, null, null, 
+						new FunctionDelegate(GenerateDirectedSlideCommand), null))));
 
 			TransitionRelation.Add(new PDAInstruction(
 				GetStates("StopGrab"),
@@ -1105,17 +1503,45 @@ namespace Agent
 				GetStates("StopGrabMove"),
 				null,
 				GenerateStackSymbolFromConditions(
-					null, (g) => g != null, 
-					null, null, (a) => a.Count > 0, null
+					null, null, null, null, (a) => a.Count > 1, null
 				),	
 				GetState("DisambiguateEvent"),
 				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None, null)));
 
 			TransitionRelation.Add(new PDAInstruction(
+				GetStates("StopGrabMove"),
+				null,
+				GenerateStackSymbolFromConditions(
+					null, null, null, null, (a) => a.Count == 1, null
+				),	
+				GetState("ConfirmEvent"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push, 
+					new StackSymbolContent(null,null,null,null,null,null))));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("StopPush"),
+				null,
+				GenerateStackSymbolFromConditions(
+					null, null, null, null, (a) => a.Count > 1, null
+				),	
+				GetState("DisambiguateEvent"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None, null)));
+
+			TransitionRelation.Add(new PDAInstruction(
+				GetStates("StopPush"),
+				null,
+				GenerateStackSymbolFromConditions(
+					null, null, null, null, (a) => a.Count == 1, null
+				),	
+				GetState("ConfirmEvent"),
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Push, 
+					new StackSymbolContent(null,null,null,null,null,null))));
+
+			TransitionRelation.Add(new PDAInstruction(
 				GetStates("DisambiguateEvent"),
 				GetInputSymbolsByName("G posack high","S YES"),
 				GenerateStackSymbolFromConditions(
-					null, (g) => g != null, null,
+					null, null, null,
 					null, (a) => a.Count > 0, null
 				),	
 				GetState("ConfirmEvent"),
@@ -1126,7 +1552,7 @@ namespace Agent
 				GetStates("DisambiguateEvent"),
 				GetInputSymbolsByName("G negack high","S NO"),
 				GenerateStackSymbolFromConditions(
-					null, (g) => g != null, null,
+					null, null, null,
 					null, (a) => a.Count > 1, null
 				),	
 				GetState("DisambiguateEvent"),
@@ -1136,7 +1562,7 @@ namespace Agent
 				GetStates("DisambiguateEvent"),
 				GetInputSymbolsByName("G negack high","S NO"),
 				GenerateStackSymbolFromConditions(
-					null, (g) => g != null, null,
+					null, null, null,
 					null, (a) => a.Count == 1, null
 				),	
 				GetState("Confusion"),
@@ -1147,7 +1573,8 @@ namespace Agent
 				null,
 				GenerateStackSymbolFromConditions(null, null, null, null, null, null),	
 				GetState("Wait"),
-				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.None,null)));
+				new PDAStackOperation(PDAStackOperation.PDAStackOperationType.Flush,
+					new StackSymbolContent(null,new FunctionDelegate(NullObject),null,null,null,null))));
 
 			TransitionRelation.Add (new PDAInstruction(
 				GetStates("EndState"),
@@ -1525,6 +1952,8 @@ namespace Agent
 			Debug.Log (((CharacterLogicEventArgs)e).InputSymbolName);
 			Debug.Log (((CharacterLogicEventArgs)e).InputSymbolContent);
 
+			LastInputSymbol = GetInputSymbolByName (((CharacterLogicEventArgs)e).InputSymbolName);
+
 			// update epistemic model
 			UpdateEpistemicModel(((CharacterLogicEventArgs)e).InputSymbolName, EpistemicCertaintyOperation.Increase);
 
@@ -1636,6 +2065,18 @@ namespace Agent
 			mapping.Add(GetInputSymbolByName("G grab move down high"),
 				new Concept[]{epistemicModel.state.GetConcept("move", ConceptType.ACTION, ConceptMode.G),
 					epistemicModel.state.GetConcept("DOWN", ConceptType.PROPERTY, ConceptMode.L)}.ToList());
+			mapping.Add(GetInputSymbolByName("G push left high"),
+				new Concept[]{epistemicModel.state.GetConcept("push", ConceptType.ACTION, ConceptMode.G),
+					epistemicModel.state.GetConcept("LEFT", ConceptType.PROPERTY, ConceptMode.L)}.ToList());
+			mapping.Add(GetInputSymbolByName("G push right high"),
+				new Concept[]{epistemicModel.state.GetConcept("push", ConceptType.ACTION, ConceptMode.G),
+					epistemicModel.state.GetConcept("RIGHT", ConceptType.PROPERTY, ConceptMode.L)}.ToList());
+			mapping.Add(GetInputSymbolByName("G push front high"),
+				new Concept[]{epistemicModel.state.GetConcept("push", ConceptType.ACTION, ConceptMode.G),
+					epistemicModel.state.GetConcept("FRONT", ConceptType.PROPERTY, ConceptMode.L)}.ToList());
+			mapping.Add(GetInputSymbolByName("G push back high"),
+				new Concept[]{epistemicModel.state.GetConcept("push", ConceptType.ACTION, ConceptMode.G),
+					epistemicModel.state.GetConcept("BACK", ConceptType.PROPERTY, ConceptMode.L)}.ToList());
 
 			mapping.Add(GetInputSymbolByName("S YES"),
 				new Concept[]{epistemicModel.state.GetConcept("YES",ConceptType.ACTION, ConceptMode.L)}.ToList());
@@ -1711,10 +2152,19 @@ namespace Agent
 				break;
 
 			case PDAStackOperation.PDAStackOperationType.Flush:
-				StackSymbolContent persistentContent = new StackSymbolContent(
-					null, GraspedObj, null, null, null, null);	// keep GraspedObj because it is a physical state, not a mental one
-				Stack.Clear ();
-				Stack.Push (GenerateStackSymbol(persistentContent));
+				if (operation.Content != null) {
+					if (operation.Content.GetType () == typeof(StackSymbolContent)) {
+						Stack.Clear ();
+						Stack.Push (GenerateStackSymbol ((StackSymbolContent)operation.Content));
+					}
+				}
+				else {
+					StackSymbolContent persistentContent = new StackSymbolContent (
+						null, GraspedObj, null, null, null, null);	// keep GraspedObj because it is a physical state, not a mental one
+					Stack.Clear ();
+					Stack.Push (GenerateStackSymbol (persistentContent));
+				}
+
 				break;
 
 			default:
@@ -1737,7 +2187,7 @@ namespace Agent
 			instructions = instructions.Where (i =>
 				(i.InputSymbols == null && inputSymbol == null) || (i.InputSymbols != null && i.InputSymbols.Contains(inputSymbol))).ToList();
 
-//			Debug.Log (instructions.Count);
+			Debug.Log (instructions.Count);
 
 			if (stackSymbol.GetType () == typeof(StackSymbolContent)) {
 				//instructions = instructions.Where (i => (i.StackSymbol.Content.GetType() == typeof(StackSymbolContent))).ToList();
@@ -1773,6 +2223,8 @@ namespace Agent
 			CurrentState = state;
 			Debug.Log (string.Format("Entering state: {0}.  Stack symbol: {1}",CurrentState.Name,
 				StackSymbolToString(GetCurrentStackSymbol())));
+
+			StateHistory.Push (CurrentState);
 		}
 
 		void ExecuteStateContent(object tempMessage = null) {
