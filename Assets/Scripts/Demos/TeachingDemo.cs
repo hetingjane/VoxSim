@@ -11,19 +11,26 @@ namespace Assets.Scripts.Demos
     class TeachingDemo : CommonDemo
     {
         EventLearningClient eventLearningClient;
+        RestClient eventRestClient;
 
         new void Start()
         {
             base.Start();
+
+            if (eventLearningClient == null)
+            {
+                eventLearningClient = GameObject.Find("CommunicationsBridge").GetComponent<PluginImport>().EventLearningClient;
+                // eventLearningClient.EventSequenceReceived += ReceivedEvent;
+            }
+
+            if (eventRestClient == null)
+            {
+                eventRestClient = GameObject.Find("CommunicationsBridge").GetComponent<RestClient>();
+            }
         }
 
         void Update()
         {
-            if (eventLearningClient == null)
-            {
-                eventLearningClient = GameObject.Find("CommunicationsBridge").GetComponent<PluginImport>().EventLearningClient;
-                eventLearningClient.EventSequenceReceived += ReceivedEvent;
-            }
         }
 
         private void ReceivedEvent(object sender, EventArgs e)
@@ -33,7 +40,8 @@ namespace Assets.Scripts.Demos
             Debug.Log(commandMessage);
 
             eventManager.InsertEvent("", 0);
-			eventManager.InsertEvent("slide(block1,<0; 0.7; 0>)", 1);
+			eventManager.InsertEvent("slide(block1,<0; 0.8; 0>)", 1);
+            eventManager.InsertEvent("slide(block1,<0.2; 0.8; 0.5>)", 2);
         }
     }
 }
