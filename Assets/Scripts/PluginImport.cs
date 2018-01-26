@@ -59,40 +59,56 @@ public class PluginImport : MonoBehaviour {
 			string eventLearnerUrlString = string.Empty;
 			foreach (string url in PlayerPrefs.GetString("URLs").Split(';')) {
 				if (url.Split ('=') [0] == "Event Learner URL") {
+                    Debug.Log("============FOUND=========== " + url);
 					eventLearnerUrlString = url.Split ('=') [1];
 					break;
 				}
 			}
 
-			string[] csuUrl = csuUrlString.Split(':');
-			string csuAddress = csuUrl [0];
-			int csuPort = Convert.ToInt32 (csuUrl [1]);
-			if (csuAddress != "") {
-				try {
-					ConnectCSU (csuAddress, csuPort);
-				}
-				catch (Exception e) {
-					Debug.Log (e.Message);
-				}
-			}
-			else {
-				Debug.Log ("CSU gesture input is not specified.");
-			}
+            if (csuUrlString != string.Empty)
+            {
+                string[] csuUrl = csuUrlString.Split(':');
+                string csuAddress = csuUrl[0];
+                int csuPort = Convert.ToInt32(csuUrl[1]);
+                if (csuAddress != "")
+                {
+                    try
+                    {
+                        ConnectCSU(csuAddress, csuPort);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.Log(e.Message);
+                    }
+                }
+            }
+            else
+            {
+                Debug.Log("CSU gesture input is not specified.");
+            }
 
-			string[] eventLearnerUrl = eventLearnerUrlString.Split(':');
-			string eventLearnerAddress = eventLearnerUrl [0];
-			int eventLearnerPort = Convert.ToInt32 (eventLearnerUrl [1]);
-			if (eventLearnerAddress != "") {
-				try {
-					ConnectSocket (eventLearnerAddress, eventLearnerPort, ref _eventLearningClient);
-				}
-				catch (Exception e) {
-					Debug.Log (e.Message);
-				}
-			}
-			else {
-				Debug.Log ("CSU gesture input is not specified.");
-			}
+            if (eventLearnerUrlString != string.Empty)
+            {
+                string[] eventLearnerUrl = eventLearnerUrlString.Split(':');
+                string eventLearnerAddress = eventLearnerUrl[0];
+                int eventLearnerPort = Convert.ToInt32(eventLearnerUrl[1]);
+                if (eventLearnerAddress != "")
+                {
+                    try
+                    {
+                        ConnectSocket(eventLearnerAddress, eventLearnerPort, ref _eventLearningClient);
+                        Debug.Log("============CONNECT SUCCESS=========== " + eventLearnerAddress);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.Log(e.Message);
+                    }
+                }
+            }
+            else
+            {
+                Debug.Log("Event learner input is not specified.");
+            }
 		}
 		else {
 			Debug.Log ("No input URLs specified.");
@@ -138,7 +154,27 @@ public class PluginImport : MonoBehaviour {
 			}
 		}
 
-		if (_cmdServer != null)
+        if (_eventLearningClient != null)
+        {
+            if (_eventLearningClient.IsConnected())
+            {
+                string inputFromLearning = _eventLearningClient.GetMessage();
+                if (inputFromLearning != "")
+                {
+                    Debug.Log(inputFromLearning);
+                    Debug.Log(_eventLearningClient.HowManyLeft() + " messages left.");
+                    _eventLearningClient.OnEventSequenceReceived(this, new EventLearningEventArgs(inputFromLearning));
+                }
+            }
+            else
+            {
+                Debug.LogError("Connection to event learning server is lost!");
+                _eventLearningClient.OnConnectionLost(this, null);
+                _eventLearningClient = null;
+            }
+        }
+
+        if (_cmdServer != null)
 		{
 			string inputFromCommander = _cmdServer.GetMessage();
 			if (inputFromCommander != "") {

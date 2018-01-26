@@ -58,6 +58,7 @@ public class ModuleObjectCreation : ModalWindow {
 	ObjectSelector objSelector;
 	VoxemeInit voxemeInit;
 	Predicates preds;
+    GameObject tableSurface;
 
 	GhostFreeRoamCamera cameraControl;
 
@@ -80,9 +81,13 @@ public class ModuleObjectCreation : ModalWindow {
 		objSelector = GameObject.Find ("BlocksWorld").GetComponent<ObjectSelector> ();
 		voxemeInit = GameObject.Find ("BlocksWorld").GetComponent<VoxemeInit> ();
 		preds = GameObject.Find ("BehaviorController").GetComponent<Predicates> ();
-		//windowManager = GameObject.Find ("BlocksWorld").GetComponent<ModalWindowManager> ();
+        //windowManager = GameObject.Find ("BlocksWorld").GetComponent<ModalWindowManager> ();
 
-		cameraControl = Camera.main.GetComponent<GhostFreeRoamCamera> ();
+        tableSurface = GameObject.Find("square_table/surface");
+        Debug.Log("===TABLE===");
+        Debug.Log(Helper.GetObjectWorldSize(tableSurface));
+
+        cameraControl = Camera.main.GetComponent<GhostFreeRoamCamera> ();
 
 		prefabs = Resources.LoadAll ("DemoObjects");
 		foreach (UnityEngine.Object prefab in prefabs) {
@@ -143,7 +148,11 @@ public class ModuleObjectCreation : ModalWindow {
 							    (Mathf.Abs (selectRayhit.point.z - Helper.GetObjectWorldSize (sandboxSurface).max.z) >= Helper.GetObjectWorldSize (selectedObject).extents.z)) {
 								selectedObject.transform.position = new Vector3 (selectRayhit.point.x,
 									preds.ON (new object[] { sandboxSurface }).y + surfacePlacementOffset, selectRayhit.point.z);
-								Voxeme voxComponent = selectedObject.GetComponent<Voxeme> ();
+
+                                Debug.Log("=========================PLACE=======================");
+                                Debug.Log(selectedObject.transform.position);
+
+                                Voxeme voxComponent = selectedObject.GetComponent<Voxeme> ();
 								voxComponent.targetPosition = selectedObject.transform.position;
 
 								foreach (Voxeme child in voxComponent.children) {

@@ -1826,7 +1826,7 @@ public class Predicates : MonoBehaviour {
 					eventManager.InsertEvent (string.Format ("grasp({0})", (args [0] as GameObject).name), 0);
 					if (args.Length > 2) {
 						eventManager.InsertEvent (eventManager.evalOrig [string.Format ("slide({0},{1})", (args [0] as GameObject).name, Helper.VectorToParsable ((Vector3)args [1]))], 2);
-					}
+                    }
 					else {
 						eventManager.InsertEvent (eventManager.evalOrig [string.Format ("slide({0})", (args [0] as GameObject).name)], 2);
 					}
