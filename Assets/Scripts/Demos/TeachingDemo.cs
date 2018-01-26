@@ -16,21 +16,20 @@ namespace Assets.Scripts.Demos
         new void Start()
         {
             base.Start();
+        }
 
+        void Update()
+        {
             if (eventLearningClient == null)
             {
                 eventLearningClient = GameObject.Find("CommunicationsBridge").GetComponent<PluginImport>().EventLearningClient;
-                // eventLearningClient.EventSequenceReceived += ReceivedEvent;
+                eventLearningClient.EventSequenceReceived += ReceivedEvent;
             }
 
             if (eventRestClient == null)
             {
                 eventRestClient = GameObject.Find("CommunicationsBridge").GetComponent<RestClient>();
             }
-        }
-
-        void Update()
-        {
         }
 
         private void ReceivedEvent(object sender, EventArgs e)

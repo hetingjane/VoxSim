@@ -27,7 +27,7 @@ namespace Assets.Scripts.Demos
         protected void Start()
         {
             eventManager = GameObject.Find("BehaviorController").GetComponent<EventManager>();
-            //eventManager.EventComplete += ReturnToRest;
+            // eventManager.EventComplete += ReturnToRest;
 
             Diana = GameObject.Find("Diana");
 			ik = Diana.GetComponent<FullBodyBipedIK> ();

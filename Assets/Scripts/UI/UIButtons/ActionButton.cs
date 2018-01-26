@@ -6,6 +6,7 @@ using Network;
 
 public class ActionButton : UIButton {
     RestClient eventRestClient;
+    protected EventManager eventManager;
 
     public int fontSize = 12;
     public string actionType;
@@ -25,6 +26,8 @@ public class ActionButton : UIButton {
         {
             eventRestClient = GameObject.Find("CommunicationsBridge").GetComponent<RestClient>();
         }
+
+        eventManager = GameObject.Find("BehaviorController").GetComponent<EventManager>();
     }
 
 	// Update is called once per frame
@@ -51,7 +54,8 @@ public class ActionButton : UIButton {
             Debug.Log("Receive command ");
             Debug.Log(www.text);
 
-
+            eventManager.InsertEvent("", 0);
+            eventManager.InsertEvent(www.text, 1);
         }
     }
 }
