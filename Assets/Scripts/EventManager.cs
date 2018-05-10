@@ -29,13 +29,6 @@ public class EventManagerArgs : EventArgs {
 }
 
 public class EventManager : MonoBehaviour {
-	public FullBodyBipedIK bodyIk;
-	public InteractionLookAt lookAt = new InteractionLookAt();
-	public InteractionSystem interactionSystem;
-
-	//public GameObject leftHandTarget;
-	public InteractionObject interactionObject;
-
 	public List<String> events = new List<String>();
 	public OrderedDictionary eventsStatus = new OrderedDictionary();
 	public ObjectSelector objSelector;
@@ -144,11 +137,11 @@ public class EventManager : MonoBehaviour {
 	}
 
 
-	float initiatePhaseTime = 0f;
-	public bool isInitiatePhase = false;
+	//float initiatePhaseTime = 0f;
+	//public bool isInitiatePhase = false;
 
-	float recoverPhaseTime = 1f;
-	public bool startRecoverPhase = false;
+	//float recoverPhaseTime = 1f;
+	//public bool startRecoverPhase = false;
 
 //	// Update is called once per frame
 //	void Update () {
@@ -318,11 +311,6 @@ public class EventManager : MonoBehaviour {
 				completedEvent = events [events.Count - 1];
 				RemoveEvent (events.Count - 1);
 
-				//if (interactionSystem != null) {
-					//interactionSystem.ResumeAll ();
-					//startRecoverPhase = true;
-				//}
-
 				if (events.Count > 0) {
 					ExecuteNextCommand ();
 				}
@@ -396,36 +384,9 @@ public class EventManager : MonoBehaviour {
 			return;
 		}
 
-
 		Hashtable predArgs = Helper.ParsePredicate (events [0]);
 		String pred = Helper.GetTopPredicate (events [0]);
 
-//		if (bodyIk != null) {
-//			if (predArgs.Count > 0) {
-//				try {
-//					// Resolve interactionObject
-//					var objs = extractObjects (pred, (String)predArgs [pred]);
-//					if (objs.Count > 0 && objs [0] is GameObject) {
-//						interactionObject = ((GameObject)objs [0]).GetComponentInChildren<InteractionObject> ();
-//					}
-//					
-//
-////					if (interactionObject != null) {
-////						// Execute interaction	
-////						interactionSystem.StartInteraction (FullBodyBipedEffector.RightHand, interactionObject, true);
-////
-////						// TUAN
-////						// Before Executing event
-////						// Move hand to reach the target
-////						isInitiatePhase = true;
-////						Debug.Log ("======= isInitiatePhase true ========");
-////					}
-//				} catch (ArgumentNullException e) {
-//					return;
-//				}
-//			}
-//		}
-//		else {
 		/// NIKHIL: Instead of having isInitiatePhase here, all events w/ agent should insert a "grasp" precondition
 		/// This should be handled automatically in a VoxML interpreter
 			if (SatisfactionTest.ComputeSatisfactionConditions (events [0])) {
@@ -561,36 +522,45 @@ public class EventManager : MonoBehaviour {
 
 	public void ExecuteCommand(String evaluatedCommand) {
 		Debug.Log("Execute command: " + evaluatedCommand);
-		Hashtable predArgs = Helper.ParsePredicate (evaluatedCommand);
-		String pred = Helper.GetTopPredicate (evaluatedCommand);
+        Hashtable predArgs = Helper.ParsePredicate(evaluatedCommand);
+        String pred = Helper.GetTopPredicate(evaluatedCommand);
 
-		if (predArgs.Count > 0) {
-			try {
-				var objs = extractObjects (pred, (String)predArgs [pred]);
+        if (predArgs.Count > 0)
+        {
+            try
+            {
+                var objs = extractObjects(pred, (String)predArgs[pred]);
 
-				if (preds.rdfTriples.Count > 0) {
-					if (methodToCall != null) {
-						Debug.Log("========================== ExecuteCommand ============================");
-						Debug.Log ("ExecuteCommand: invoke " + methodToCall.Name);
-						object obj = methodToCall.Invoke (preds, new object[]{ objs.ToArray () });
-						Debug.Log (evaluatedCommand);
-						OnExecuteEvent (this, new EventManagerArgs (evaluatedCommand));
-					}
-					else {
-						if (File.Exists (Data.voxmlDataPath + string.Format ("/programs/{0}.xml", pred))) {
-							using (StreamReader sr = new StreamReader (Data.voxmlDataPath + string.Format ("/programs/{0}.xml", pred))) {
-								preds.ComposeSubevents (VoxML.LoadFromText (sr.ReadToEnd ()), objs.ToArray ());
-							}
-						}
-					}
-				}
-			} catch (ArgumentNullException e){
-				return;
-			}
-		}
-	}
+                if (preds.rdfTriples.Count > 0)
+                {
+                    if (methodToCall != null)
+                    {
+                        Debug.Log("========================== ExecuteCommand ============================");
+                        Debug.Log("ExecuteCommand: invoke " + methodToCall.Name);
+                        object obj = methodToCall.Invoke(preds, new object[] { objs.ToArray() });
+                        Debug.Log(evaluatedCommand);
+                        OnExecuteEvent(this, new EventManagerArgs(evaluatedCommand));
+                    }
+                    else
+                    {
+                        if (File.Exists(Data.voxmlDataPath + string.Format("/programs/{0}.xml", pred)))
+                        {
+                            using (StreamReader sr = new StreamReader(Data.voxmlDataPath + string.Format("/programs/{0}.xml", pred)))
+                            {
+                                preds.ComposeSubevents(VoxML.LoadFromText(sr.ReadToEnd()), objs.ToArray());
+                            }
+                        }
+                    }
+                }
+            }
+            catch (ArgumentNullException e)
+            {
+                return;
+            }
+        }
+    }
 
-	public void AbortEvent() {
+    public void AbortEvent() {
 		if (events.Count > 0) {
 			//InsertEvent ("satisfy()", 0);
 			InsertEvent ("", 0);

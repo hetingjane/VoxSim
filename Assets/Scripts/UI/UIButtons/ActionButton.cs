@@ -40,22 +40,22 @@ public class ActionButton : UIButton {
 		buttonStyle.fontSize = fontSize;
 
 		if (GUI.Button (buttonRect, buttonText, buttonStyle)) {
-           StartCoroutine(callLearningServer());
+           CallLearningServer();
         }
 
 		base.OnGUI ();
 	}
 
-    protected IEnumerator callLearningServer()
+    protected void CallLearningServer()
     {
-        using (WWW www = new WWW("http://localhost:8000/learning/"))
-        {
-            yield return www;
-            Debug.Log("Receive command ");
-            Debug.Log(www.text);
+        eventManager.InsertEvent("", 0);
 
-            eventManager.InsertEvent("", 0);
-            eventManager.InsertEvent(www.text, 1);
-        }
+        // hard code here, but should be able to fix quickly
+        eventManager.InsertEvent("slide(block2,<-0.1; 1; 0.3>)", 1);
+        eventManager.InsertEvent("slide(block2,<-0.7; 1; 0.4>)", 2);
+        eventManager.InsertEvent("slide(block2,<-0.6; 1; 1>)", 3);
+        eventManager.InsertEvent("slide(block2,<0.2; 1; 0.4>)", 4);
+
+        eventManager.InsertEvent("upgrasp(block2)", 5);
     }
 }

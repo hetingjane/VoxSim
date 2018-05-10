@@ -41,6 +41,12 @@ namespace Assets.Scripts.Demos
             eventManager.InsertEvent("", 0);
 			eventManager.InsertEvent("slide(block1,<0; 0.8; 0>)", 1);
             eventManager.InsertEvent("slide(block1,<0.2; 0.8; 0.5>)", 2);
+
+            // static ( -0.5, 0.6 )
+            // moving point ( -0.1, 0.3 )
+            // moving point ( -0.7, 0.4 )
+            // moving point ( -0.6, 1 )
+            // moving point ( 0.2, 0.4 )
         }
     }
 }
