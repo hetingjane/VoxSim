@@ -34,9 +34,9 @@ namespace VideoCapture {
 			}
 		}
 
-		List<GameObject> eventObjs;
-
-		Dictionary<string,string> paramValues;
+		bool capturing = false;
+		bool writingFile = false;
+		bool stopCaptureFlag = false;
 
 		// Use this for initialization
 		void Start () {
