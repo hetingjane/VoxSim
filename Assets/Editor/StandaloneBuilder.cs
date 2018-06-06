@@ -29,7 +29,7 @@ public class StandaloneBuilder : Editor {
 					}
 				}
 			}
-			BuildPipeline.BuildPlayer(scenes.ToArray(),"Build/mac/"+buildName,BuildTarget.StandaloneOSX,BuildOptions.None);
+			BuildPipeline.BuildPlayer(scenes.ToArray(),"Build/mac/"+buildName,BuildTarget.StandaloneOSXUniversal,BuildOptions.None);
 		}
 	}
 }

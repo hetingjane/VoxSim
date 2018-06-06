@@ -33,25 +33,25 @@ namespace Assets.Scripts.Demos
 			//ik = Diana.GetComponent<FullBodyBipedIK> ();
 			//interactionSystem = Diana.GetComponent<InteractionSystem> ();
    //         ikControl = Diana.GetComponent<IKControl>();
-            leftTargetDefault = ikControl.leftHandObj.transform.position;
-            rightTargetDefault = ikControl.rightHandObj.transform.position;
+ //           leftTargetDefault = ikControl.leftHandObj.transform.position;
+ //           rightTargetDefault = ikControl.rightHandObj.transform.position;
 
-			TurnForward ();
+//			TurnForward ();
         }
 
         void ReturnToRest(object sender, EventArgs e)
         {
-            if (!interactionSystem.IsPaused(FullBodyBipedEffector.LeftHand) &&
-                !interactionSystem.IsPaused(FullBodyBipedEffector.RightHand))
-            {
-                TurnForward();
-            }
+//            if (!interactionSystem.IsPaused(FullBodyBipedEffector.LeftHand) &&
+//                !interactionSystem.IsPaused(FullBodyBipedEffector.RightHand))
+ //           {
+ //               TurnForward();
+ //           }
         }
 
         void TurnForward()
         {
-            ikControl.leftHandObj.position = leftTargetDefault;
-            ikControl.rightHandObj.position = rightTargetDefault;
+ //           ikControl.leftHandObj.position = leftTargetDefault;
+ //           ikControl.rightHandObj.position = rightTargetDefault;
             //InteractionHelper.SetLeftHandTarget(Diana, ikControl.leftHandObj);
             //InteractionHelper.SetRightHandTarget(Diana, ikControl.rightHandObj);
         }

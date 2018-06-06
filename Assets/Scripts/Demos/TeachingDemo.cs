@@ -23,7 +23,10 @@ namespace Assets.Scripts.Demos
             if (eventLearningClient == null)
             {
                 eventLearningClient = GameObject.Find("CommunicationsBridge").GetComponent<PluginImport>().EventLearningClient;
-                eventLearningClient.EventSequenceReceived += ReceivedEvent;
+
+				if (eventLearningClient != null) {
+					eventLearningClient.EventSequenceReceived += ReceivedEvent;
+				}
             }
 
             if (eventRestClient == null)
