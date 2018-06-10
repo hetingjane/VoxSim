@@ -111,6 +111,9 @@ namespace VideoCapture
             FileWritten += CaptureComplete;
         }
 
+        int loopTo = 0;
+        int loopIndex = 0;
+
         public void captureDemonstrations()
         {
             //for (int i = 0; i < 10; i ++ )
@@ -118,7 +121,7 @@ namespace VideoCapture
             //    StartCoroutine(runDemonstration(i));
             //}
 
-            StartCoroutine(runMultipleDemonstrations(0, 10));
+            StartCoroutine(runMultipleDemonstrations(0, 150));
 
             //runDemonstrationStraight(obs.Around[0]);
         }
@@ -132,13 +135,17 @@ namespace VideoCapture
 
         IEnumerator runMultipleDemonstrations( int from, int to )
         {
-            for (int i = from; i < to; i++)
-            {
-                yield return runDemonstration(i);
-            }
+            loopIndex = from;
+            loopTo = to;
+
+            yield return runDemonstration();
+            //for (int i = from; i < to; i++)
+            //{
+            //    yield return runDemonstration(i);
+            //}
         }
 
-        IEnumerator runDemonstration(int loopIndex)
+        IEnumerator runDemonstration()
         {
             int trueIndex = hardcodePermutation[loopIndex];
 
@@ -153,16 +160,16 @@ namespace VideoCapture
 
             StartCapture(null, null);
 
+            yield return new WaitForSeconds(1);
+
             ////Wait for 4 seconds
             //yield return new WaitForSeconds(1);
 
             demonstrate(d);
 
-            yield return new WaitForSeconds(5);
+            yield return new WaitForSeconds(3);
 
             SaveCapture(loopIndex + ".mp4");
-
-            yield return new WaitForSeconds(1);
         }
 
 
@@ -278,7 +285,13 @@ namespace VideoCapture
 
         void CaptureComplete(object sender, EventArgs e)
         {
+            Debug.Log("==Capture Completed==");
             // queue next one
+            loopIndex++;
+            if (loopIndex < loopTo)
+            {
+                StartCoroutine(runDemonstration());
+            }
         }
     }
 }
