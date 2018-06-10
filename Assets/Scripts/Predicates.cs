@@ -2189,26 +2189,35 @@ public class Predicates : MonoBehaviour {
 			}
 		}
 
-		// plan path to destination
-		if (!Helper.VectorIsNaN (targetPosition)) { 
-			if (aStarSearch.path.Count == 0) {
-				Bounds surfaceBounds = Helper.GetObjectWorldSize ((args [0] as GameObject).GetComponent<Voxeme> ().supportingSurface);
-				Bounds objBounds = Helper.GetObjectWorldSize (args [0] as GameObject);
-				Bounds embeddingSpaceBounds = new Bounds ();
-				embeddingSpaceBounds.SetMinMax (new Vector3 (surfaceBounds.min.x+(objBounds.size.x/2), surfaceBounds.max.y, surfaceBounds.min.z+(objBounds.size.z/2)),
-					new Vector3 (surfaceBounds.max.x, objBounds.max.y, surfaceBounds.max.z));
+        // plan path to destination
+        if (!Helper.VectorIsNaN(targetPosition))
+        {
+            if (aStarSearch.path.Count == 0)
+            {
+                Bounds surfaceBounds = Helper.GetObjectWorldSize((args[0] as GameObject).GetComponent<Voxeme>().supportingSurface);
+                Bounds objBounds = Helper.GetObjectWorldSize(args[0] as GameObject);
+                Bounds embeddingSpaceBounds = new Bounds();
+                embeddingSpaceBounds.SetMinMax(new Vector3(surfaceBounds.min.x + (objBounds.size.x / 2), surfaceBounds.max.y, surfaceBounds.min.z + (objBounds.size.z / 2)),
+                    new Vector3(surfaceBounds.max.x, objBounds.max.y, surfaceBounds.max.z));
 
-				aStarSearch.start = (args [0] as GameObject).transform.position;
-				aStarSearch.goal = targetPosition;
-				aStarSearch.PlanPath (aStarSearch.start, aStarSearch.goal, out aStarSearch.path, (args [0] as GameObject), embeddingSpaceBounds, "Y");
 
-				foreach (Vector3 node in aStarSearch.path) {
-					(args [0] as GameObject).GetComponent<Voxeme> ().interTargetPositions.Enqueue (node);
-				}
-			}
-		}
+                // Skip aStarSearch
+                //aStarSearch.start = (args[0] as GameObject).transform.position;
+                //aStarSearch.goal = targetPosition;
 
-		return;
+                //aStarSearch.PlanPath(aStarSearch.start, aStarSearch.goal, out aStarSearch.path, (args[0] as GameObject), embeddingSpaceBounds, "Y");
+
+                
+                //foreach (Vector3 node in aStarSearch.path)
+                //{
+                //    (args[0] as GameObject).GetComponent<Voxeme>().interTargetPositions.Enqueue(node);
+                //}
+
+                (args[0] as GameObject).GetComponent<Voxeme>().interTargetPositions.Enqueue(targetPosition);
+            }
+        }
+
+        return;
 	}
 
 	// IN: Objects, Location
