@@ -75,39 +75,39 @@ public class FixHandRotation : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (handTarget)
-        {
-            // Calculate rotation needed to keep the hand natural
-            Vector3 handDirection = GetHandDirection().normalized;
-            Vector3 objectDirection = (transform.position - rootJoint.transform.position).normalized;
-            float delta = GetAngleBetween(Flatten(handDirection), Flatten(objectDirection));
+        //if (handTarget)
+        //{
+        //    // Calculate rotation needed to keep the hand natural
+        //    Vector3 handDirection = GetHandDirection().normalized;
+        //    Vector3 objectDirection = (transform.position - rootJoint.transform.position).normalized;
+        //    float delta = GetAngleBetween(Flatten(handDirection), Flatten(objectDirection));
 
-            // Rotate the object if grabbing, else rotate the hand alone
-            if (IsGrabbingObject())
-            {
-                if (!needObjectRotationReset)
-                {
-                    // Cache the rotation of the object
-                    initialObjectRotation = transform.rotation.eulerAngles;
-                    needObjectRotationReset = true;
-                }
+        //    // Rotate the object if grabbing, else rotate the hand alone
+        //    if (IsGrabbingObject())
+        //    {
+        //        if (!needObjectRotationReset)
+        //        {
+        //            // Cache the rotation of the object
+        //            initialObjectRotation = transform.rotation.eulerAngles;
+        //            needObjectRotationReset = true;
+        //        }
 
-                // Rotate the object
-                transform.Rotate(Vector3.up, delta);
-            }
-            else
-            {
-                if (needObjectRotationReset)
-                {
-                    // Re-apply cached rotation now that we are no longer grabbing it
-                    transform.rotation = Quaternion.Euler(initialObjectRotation);
-                    needObjectRotationReset = false;
-                }
+        //        // Rotate the object
+        //        transform.Rotate(Vector3.up, delta);
+        //    }
+        //    else
+        //    {
+        //        if (needObjectRotationReset)
+        //        {
+        //            // Re-apply cached rotation now that we are no longer grabbing it
+        //            transform.rotation = Quaternion.Euler(initialObjectRotation);
+        //            needObjectRotationReset = false;
+        //        }
 
-                // Rotate the hand around the object
-                handTarget.transform.RotateAround(transform.position, Vector3.up, delta);
-            }
-        }
+        //        // Rotate the hand around the object
+        //        handTarget.transform.RotateAround(transform.position, Vector3.up, delta);
+        //    }
+        //}
     }
 
     /// <summary>

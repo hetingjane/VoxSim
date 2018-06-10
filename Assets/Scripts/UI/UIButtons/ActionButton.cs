@@ -56,6 +56,6 @@ public class ActionButton : UIButton {
         eventManager.InsertEvent("slide(block2,<-0.6; 1; 1>)", 3);
         eventManager.InsertEvent("slide(block2,<0.2; 1; 0.4>)", 4);
 
-        eventManager.InsertEvent("upgrasp(block2)", 5);
+        //eventManager.InsertEvent("upgrasp(block2)", 5);
     }
 }
