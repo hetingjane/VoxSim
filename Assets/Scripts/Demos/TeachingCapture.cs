@@ -167,7 +167,7 @@ namespace VideoCapture
 
             demonstrate(d);
 
-            yield return new WaitForSeconds(3);
+            yield return new WaitForSeconds(5);
 
             SaveCapture(loopIndex + ".mp4");
         }
@@ -188,12 +188,12 @@ namespace VideoCapture
             //selectedObject.GetComponent<Rigging> ().ActivatePhysics (true);
 
             var block1 = GameObject.Find("block1");
-            Debug.Log(d.getFirstStart());
+            Debug.Log("FirstStart " + d.getFirstStart());
             block1.transform.position = new Vector3(d.getFirstStart().x, 1.04f, d.getFirstStart().y);
             (block1.GetComponent<Voxeme>() as Voxeme).targetPosition = block1.transform.position;
 
             var block2 = GameObject.Find("block2");
-            Debug.Log(d.getSecondStart());
+            Debug.Log("SecondStart " + d.getSecondStart());
             block2.transform.position = new Vector3(d.getSecondStart().x, 1.04f, d.getSecondStart().y);
             (block2.GetComponent<Voxeme>() as Voxeme).targetPosition = block2.transform.position;
         }
@@ -288,6 +288,13 @@ namespace VideoCapture
             Debug.Log("==Capture Completed==");
             // queue next one
             loopIndex++;
+
+            // Recapture Around, makes it longer
+            while (loopIndex < loopTo && (hardcodePermutation[loopIndex] < 90 || hardcodePermutation[loopIndex] >= 120 ))
+            {
+                loopIndex++;
+            }
+
             if (loopIndex < loopTo)
             {
                 StartCoroutine(runDemonstration());
